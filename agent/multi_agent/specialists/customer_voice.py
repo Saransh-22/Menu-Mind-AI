@@ -1,7 +1,7 @@
 """
-Specialist Agent 4: Customer Voice Agent.
-Expertise in review sentiment synthesis, item-level perception analysis,
-recurring customer complaints, and external review attribution.
+Specialist Agent 3: Customer Voice Agent.
+Expertise in guest sentiment analysis, dish-specific feedback, recurring complaints,
+and guest satisfaction driver identification.
 """
 from __future__ import annotations
 
@@ -9,88 +9,113 @@ import logging
 from typing import Optional
 import pandas as pd
 
-from services.sentiment_service import analyze_sentiment_local, extract_item_review_insights
-from config.settings import GEMINI_MODEL
+from services.gemini_service import get_gemini_service
+import agent.multi_agent.tools as tool_svc
 
 logger = logging.getLogger(__name__)
 
 
 class CustomerVoiceAgent:
-    """Specialist agent for customer feedback and reputation analytics."""
+    """Specialist agent for customer feedback and review analytics."""
 
     def __init__(self, gemini_client=None):
-        self.gemini_client = gemini_client
+        self.gemini_svc = get_gemini_service()
 
     def answer_query(
         self,
         query: str,
         restaurant_name: str,
-        reviews_df: Optional[pd.DataFrame],
-        menu_df: Optional[pd.DataFrame],
+        run_id: Optional[int] = None,
+        reviews_df: Optional[pd.DataFrame] = None,
+        menu_df: Optional[pd.DataFrame] = None,
+        dish_name: Optional[str] = None,
     ) -> str:
-        """Analyze verified reviews and feedback to answer customer satisfaction questions."""
-        if reviews_df is None or reviews_df.empty:
+        """Analyze verified reviews to answer natural language guest perception questions."""
+        q_low = query.lower()
+
+        # Extract dish name if present in query or parameter
+        target_dish = dish_name
+        if not target_dish:
+            for dish in ["butter chicken", "biryani", "paneer", "naan", "dal makhani", "tikka", "pizza", "pasta"]:
+                if dish in q_low:
+                    target_dish = dish
+                    break
+
+        reviews_info = tool_svc.get_customer_reviews(run_id or 0, item_name=target_dish) if run_id else {"has_reviews": False}
+
+        if not reviews_info.get("has_reviews"):
+            if target_dish:
+                return (
+                    f"### Customer Reviews for '{target_dish.title()}'\n\n"
+                    f"There are currently **no customer reviews mentioning '{target_dish.title()}'** in your uploaded review dataset for **{restaurant_name}**.\n\n"
+                    "We do not synthesize or fabricate fictional guest feedback. "
+                    "You can upload updated review datasets in the **Data Upload** section or fetch live online reviews in the **Review Insights** tab."
+                )
             return (
                 f"No customer reviews are currently available for **{restaurant_name}**. "
                 "Upload a review CSV or click **Fetch External Reviews** in the Review Insights tab."
             )
 
-        sentiment = analyze_sentiment_local(reviews_df)
-        item_insights = extract_item_review_insights(reviews_df, menu_df)
-
-        tot_rev = sentiment.review_count
-        avg_rat = f"{sentiment.avg_rating:.1f}/5.0" if sentiment.avg_rating else "N/A"
-        pos_pct = f"{sentiment.positive_pct * 100:.0f}%"
-        neg_pct = f"{sentiment.negative_pct * 100:.0f}%"
-
-        loved_themes = ", ".join(f"{t['theme']} ({t['frequency']} mentions)" for t in sentiment.appreciated_features[:3])
-        complaints = ", ".join(f"{c['theme']} ({c['frequency']} mentions)" for c in sentiment.complaints[:3])
-
-        # Find dishes mentioned
-        top_compliment_dishes = [it for it in item_insights if it.get("top_compliment")][:3]
-        top_complaint_dishes = [it for it in item_insights if it.get("top_complaint")][:3]
-
-        dish_summary = ""
-        if top_compliment_dishes:
-            dish_summary += "\nPraised dishes: " + "; ".join(f"{d['item_name']} (\"{d['top_compliment']}\")" for d in top_compliment_dishes)
-        if top_complaint_dishes:
-            dish_summary += "\nFlagged dishes: " + "; ".join(f"{d['item_name']} (\"{d['top_complaint']}\")" for d in top_complaint_dishes)
+        # Context construction
+        if target_dish and reviews_info.get("reviews"):
+            excerpts = [f"- \"{r['text']}\" ({r.get('rating') or 'N/A'}★)" for r in reviews_info["reviews"][:5]]
+            review_context = (
+                f"Dish: {target_dish.title()}\n"
+                f"Total Mentions: {reviews_info.get('mention_count')}\n"
+                f"Average Score for Item: {reviews_info.get('average_rating_for_item')}/5.0\n"
+                f"Excerpts:\n" + "\n".join(excerpts)
+            )
+        else:
+            sample_excerpts = [f"- \"{r['text']}\" ({r.get('rating') or 'N/A'}★)" for r in reviews_info.get("sample_reviews", [])[:4]]
+            review_context = (
+                f"Total Reviews: {reviews_info.get('review_count')}\n"
+                f"Average Rating: {reviews_info.get('overall_average_rating')}/5.0\n"
+                f"Recent Reviews:\n" + "\n".join(sample_excerpts)
+            )
 
         system_instruction = (
             "You are the Customer Voice Agent for MenuMind AI. "
-            "Synthesize customer sentiment for the restaurant. "
-            "Never invent quotes or ratings. State exact percentages, loved themes, and operational pain points."
+            "Synthesize customer feedback directly answering the user's question. "
+            "Never fabricate customer reviews or sentiments. Quote or cite verified review excerpts. "
+            "Categorize feedback into appreciated features, recurring complaints, and concrete kitchen/service improvements."
         )
 
         prompt = (
             f"Restaurant: {restaurant_name}\n"
-            f"Total Reviews: {tot_rev} (Rating: {avg_rat})\n"
-            f"Sentiment: {pos_pct} Positive | {neg_pct} Negative\n"
-            f"What Customers Love: {loved_themes or 'General quality'}\n"
-            f"Recurring Complaints: {complaints or 'None highlighted'}\n"
-            f"{dish_summary}\n\n"
+            f"Grounded Customer Review Evidence:\n"
+            f"{review_context}\n\n"
             f"User Question: \"{query}\"\n\n"
-            "Provide a direct, empathetic synthesis of customer perception and 2 concrete kitchen/service improvements."
+            "Provide a direct, empathetic, and evidence-grounded synthesis with 2 operational actions."
         )
 
-        if self.gemini_client:
+        if self.gemini_svc.is_available():
             try:
-                response = self.gemini_client.models.generate_content(
-                    model=GEMINI_MODEL,
-                    contents=prompt,
-                    config={"system_instruction": system_instruction},
+                res = self.gemini_svc.generate_content(
+                    prompt=prompt,
+                    system_instruction=system_instruction,
+                    temperature=0.3,
                 )
-                if response and response.text:
-                    return response.text
+                if res:
+                    return res
             except Exception as exc:
-                logger.warning("Customer Voice Agent LLM call failed: %s", exc)
+                logger.warning("Customer Voice Agent Gemini call failed: %s", exc)
 
         # Deterministic fallback
+        if target_dish:
+            return (
+                f"### Customer Perception: {target_dish.title()} at {restaurant_name}\n\n"
+                f"- **Review Mentions:** {reviews_info.get('mention_count')} mentions analyzed (Average Score: **{reviews_info.get('average_rating_for_item') or 'N/A'}/5.0**).\n\n"
+                f"**Verified Review Excerpts:**\n"
+                + "\n".join(f"- *\"{r['text']}\"* ({r.get('rating') or 'N/A'}★)" for r in reviews_info.get("reviews", [])[:4])
+                + f"\n\n**Key Takeaways:**\n"
+                f"- Address any consistency notes raised by guests in prep station handoffs.\n"
+                f"- Maintain the favored elements that guests praised in their dining feedback."
+            )
+
         return (
-            f"### Customer Voice & Sentiment: {restaurant_name}\n\n"
-            f"- **Volume Analyzed:** {tot_rev} reviews with an average score of **{avg_rat}**.\n"
-            f"- **Sentiment Distribution:** {pos_pct} Positive vs {neg_pct} Negative.\n"
-            f"- **Top Praises:** {loved_themes or 'Quality food and flavor'}\n"
-            f"- **Primary Friction Points:** {complaints or 'Occasional wait times'}\n\n"
-            f"**Operational Recommendation:** Address recurring complaints on flagged menu items to improve overall guest ratings and repeat visits."
+            f"### Guest Review Synthesis: {restaurant_name}\n\n"
+            f"- **Volume Analyzed:** {reviews_info.get('review_count')} customer reviews.\n"
+            f"- **Average Rating:** **{reviews_info.get('overall_average_rating') or 'N/A'}/5.0**.\n\n"
+            f"**Recent Guest Excerpts:**\n"
+            + "\n".join(f"- *\"{r['text']}\"* ({r.get('rating') or 'N/A'}★)" for r in reviews_info.get("sample_reviews", [])[:3])
         )

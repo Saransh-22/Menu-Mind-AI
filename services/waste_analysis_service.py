@@ -24,10 +24,11 @@ def analyze_food_image(image_bytes: bytes, mime_type: str) -> dict:
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY is not configured.")
 
-    from google import genai
-    from google.genai import types
+    from services.gemini_service import get_gemini_service
+    gemini_svc = get_gemini_service()
+    if not gemini_svc.is_available():
+        raise RuntimeError("GEMINI_API_KEY is not configured.")
 
-    client = genai.Client(api_key=GEMINI_API_KEY)
     prompt = """
 You are assisting a restaurant with kitchen food-waste logging.
 Inspect the image and return ONLY valid JSON with this schema:
@@ -46,18 +47,11 @@ Identify only visible items. Do not infer exact weight, freshness, food safety,
 discard status, cost, or whether food is safe to reuse. Use confidence 0-1.
 If no food is clearly visible, return an empty items list.
 """
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=[
-            prompt,
-            types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
-        ],
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            temperature=0.1,
-        ),
+    raw = gemini_svc.analyze_image(
+        image_bytes=image_bytes,
+        mime_type=mime_type,
+        prompt=prompt,
     )
-    raw = (response.text or "").strip()
     if raw.startswith("```"):
         raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.I)
     parsed = json.loads(raw)

@@ -509,11 +509,18 @@ def save_generated_asset(asset_id: str, conversation_id: Optional[str],
                          status: str = "draft", db_path: Optional[str] = None) -> str:
     content_str = json.dumps(content) if isinstance(content, (dict, list)) else content
     with db_session(_db(db_path)) as conn:
+        valid_conv_id = conversation_id
+        if valid_conv_id:
+            exists = conn.execute(
+                "SELECT 1 FROM ai_conversations WHERE id = ?", (valid_conv_id,)
+            ).fetchone()
+            if not exists:
+                valid_conv_id = None
         conn.execute(
             """INSERT INTO ai_generated_assets
                (id, conversation_id, restaurant_id, asset_type, title, content, image_url, status)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (asset_id, conversation_id, restaurant_id, asset_type, title, content_str, image_url, status),
+            (asset_id, valid_conv_id, restaurant_id, asset_type, title, content_str, image_url, status),
         )
         return asset_id
 
@@ -586,13 +593,20 @@ def log_agent_run(run_id: str, conversation_id: Optional[str], restaurant_id: in
                   status: str = "completed", execution_time_ms: int = 0,
                   db_path: Optional[str] = None) -> str:
     with db_session(_db(db_path)) as conn:
+        valid_conv_id = conversation_id
+        if valid_conv_id:
+            exists = conn.execute(
+                "SELECT 1 FROM ai_conversations WHERE id = ?", (valid_conv_id,)
+            ).fetchone()
+            if not exists:
+                valid_conv_id = None
         conn.execute(
             """INSERT INTO ai_agent_runs
                (id, conversation_id, restaurant_id, agent_name, intent, tools_invoked, status, execution_time_ms)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 run_id,
-                conversation_id,
+                valid_conv_id,
                 restaurant_id,
                 agent_name,
                 intent,

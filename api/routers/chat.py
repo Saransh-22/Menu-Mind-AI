@@ -178,11 +178,16 @@ def send_message_endpoint(conversation_id: str, payload: MessageCreate):
 
     # 2. Invoke Multi-Agent Orchestrator
     try:
+        # Retrieve recent conversation turns for context memory and pronoun resolution
+        raw_history = repo.list_messages(conversation_id, limit=20)
+        history = [{"role": m.get("role"), "content": m.get("content")} for m in raw_history]
+
         agent_resp = orchestrator.process_message(
             conversation_id=conversation_id,
             restaurant_id=restaurant_id,
             user_message=payload.content,
             run_id=run_id,
+            conversation_history=history,
             attachments=[a.model_dump() for a in payload.attachments],
         )
     except Exception as exc:
@@ -203,6 +208,8 @@ def send_message_endpoint(conversation_id: str, payload: MessageCreate):
         "suggested_followups": agent_resp.suggested_followups,
         "menu_draft": agent_resp.menu_draft.model_dump() if agent_resp.menu_draft else None,
         "menu_design": agent_resp.menu_design.model_dump() if agent_resp.menu_design else None,
+        "recipe_data": agent_resp.recipe_data.model_dump() if agent_resp.recipe_data else None,
+        "entities": agent_resp.entities,
     }
 
     repo.save_message(

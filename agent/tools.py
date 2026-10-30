@@ -209,15 +209,22 @@ class ToolExecutor:
         if self.reviews_df is None or self.reviews_df.empty:
             return {"error": "No review data available."}
 
+        from services.gemini_service import get_gemini_service
+        gemini_svc = get_gemini_service()
+
         if self.gemini:
             try:
                 prompt = build_sentiment_prompt(self.reviews_df, item_name)
-                response = self.gemini.models.generate_content(
-                    model="gemini-2.0-flash",
-                    contents=prompt,
-                )
-                text = response.text.strip()
-                # Strip markdown code fences if present
+                if hasattr(self.gemini, "models") and hasattr(self.gemini.models, "generate_content"):
+                    resp = self.gemini.models.generate_content(
+                        model=getattr(self.gemini, "model_name", "gemini-2.5-flash"),
+                        contents=prompt,
+                    )
+                    text = resp.text
+                elif gemini_svc.is_available():
+                    text = gemini_svc.generate_content(prompt=prompt)
+                else:
+                    text = ""
                 if text.startswith("```"):
                     text = "\n".join(text.split("\n")[1:])
                     text = text.rstrip("`").strip()
@@ -392,14 +399,22 @@ class ToolExecutor:
         context = self._build_recommendation_context()
         recommendations: list[Recommendation] = []
 
+        from services.gemini_service import get_gemini_service
+        gemini_svc = get_gemini_service()
+
         if self.gemini:
             try:
                 prompt = self._build_recommendation_prompt(context)
-                response = self.gemini.models.generate_content(
-                    model=GEMINI_MODEL,
-                    contents=prompt,
-                )
-                text = response.text.strip()
+                if hasattr(self.gemini, "models") and hasattr(self.gemini.models, "generate_content"):
+                    resp = self.gemini.models.generate_content(
+                        model=getattr(self.gemini, "model_name", "gemini-2.5-flash"),
+                        contents=prompt,
+                    )
+                    text = resp.text
+                elif gemini_svc.is_available():
+                    text = gemini_svc.generate_content(prompt=prompt)
+                else:
+                    text = ""
                 if text.startswith("```"):
                     text = "\n".join(text.split("\n")[1:])
                     text = text.rstrip("`").strip()

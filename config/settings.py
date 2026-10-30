@@ -19,8 +19,10 @@ SEARCH_API_KEY = os.getenv("SEARCH_API_KEY", "")
 SEARCH_ENGINE_ID = os.getenv("SEARCH_ENGINE_ID", "")
 
 # ─── Agent Settings ───────────────────────────────────────────────────────────
-AGENT_MAX_TOOL_CALLS = int(os.getenv("AGENT_MAX_TOOL_CALLS", "20"))
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.8-flash")
+AGENT_MAX_TOOL_CALLS = int(os.getenv("AGENT_MAX_TOOL_CALLS", "15"))
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+GEMINI_TEMPERATURE = float(os.getenv("GEMINI_TEMPERATURE", "0.4"))
+GEMINI_MAX_OUTPUT_TOKENS = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "4096"))
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -51,7 +53,7 @@ CONFIDENCE_LOW = 0.25
 
 # ─── Multi-Agent & Chat Settings ──────────────────────────────────────────────
 GEMINI_CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", GEMINI_MODEL)
-GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-2.5-flash")
+GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", GEMINI_MODEL)
 IMAGE_GENERATION_PROVIDER = os.getenv("IMAGE_GENERATION_PROVIDER", "auto").lower()
 IMAGE_GENERATION_API_KEY = os.getenv("IMAGE_GENERATION_API_KEY", "")
 IMAGE_GENERATION_MODEL = os.getenv("IMAGE_GENERATION_MODEL", "imagen-3.0-generate-002")

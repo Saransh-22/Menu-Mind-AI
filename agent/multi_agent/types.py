@@ -9,13 +9,74 @@ from pydantic import BaseModel, Field
 
 
 class AgentIntent(str, Enum):
-    MENU_CONSULTING = "menu_consulting"
+    # Core 21 granular intents
+    GENERAL_INQUIRY = "general_inquiry"
+    SALES_ANALYSIS = "sales_analysis"
+    BEST_SELLING_ITEMS = "best_selling_items"
+    PROFITABILITY_ANALYSIS = "profitability_analysis"
+    MENU_OPTIMIZATION = "menu_optimization"
+    RECIPE_OPTIMIZATION = "recipe_optimization"
+    RECIPE_GENERATION = "recipe_generation"
+    MENU_CREATION = "menu_creation"
+    MENU_IMAGE_EXTRACTION = "menu_image_extraction"
     MENU_DESIGN = "menu_design"
+    PRICING_STRATEGY = "pricing_strategy"
+    CUSTOMER_REVIEW_ANALYSIS = "customer_review_analysis"
+    REVIEW_SEARCH = "review_search"
+    FOOD_WASTE_ANALYSIS = "food_waste_analysis"
+    SPOILAGE_RISK = "spoilage_risk"
+    INVENTORY_OPTIMIZATION = "inventory_optimization"
+    INGREDIENT_ANALYSIS = "ingredient_analysis"
+    FOOD_COST_ANALYSIS = "food_cost_analysis"
+    REPORT_GENERATION = "report_generation"
+    RESTAURANT_COMPARISON = "restaurant_comparison"
+    FOLLOW_UP_QUESTION = "follow_up_question"
+
+    # Backward compatibility aliases
+    MENU_CONSULTING = "menu_consulting"
     BUSINESS_INTELLIGENCE = "business_intelligence"
     CUSTOMER_VOICE = "customer_voice"
     OPERATIONS_WASTE = "operations_waste"
-    GENERAL_INQUIRY = "general_inquiry"
     MULTI_SPECIALIST = "multi_specialist"
+
+
+class IntentClassificationResult(BaseModel):
+    intent: str
+    confidence: float = 1.0
+    target_agent: str = "orchestrator"
+    entities: dict[str, Any] = Field(default_factory=dict)
+    requires_database: bool = False
+    requires_tool_call: bool = False
+    response_mode: str = "detailed_consultation"
+    clarifying_question: Optional[str] = None
+
+
+class RecipeIngredient(BaseModel):
+    name: str
+    quantity: float
+    unit: str
+    cost_estimate: Optional[float] = None
+    notes: Optional[str] = None
+
+
+class RecipeCostAnalysis(BaseModel):
+    ingredient_cost: Optional[float] = None
+    cost_per_serving: Optional[float] = None
+    target_selling_price: Optional[float] = None
+    projected_margin_pct: Optional[float] = None
+
+
+class OptimizedRecipe(BaseModel):
+    dish_name: str
+    servings: int = 4
+    prep_time_minutes: Optional[int] = None
+    cook_time_minutes: Optional[int] = None
+    ingredients: list[RecipeIngredient] = Field(default_factory=list)
+    preparation_steps: list[str] = Field(default_factory=list)
+    optimization_changes: list[str] = Field(default_factory=list)
+    cost_analysis: RecipeCostAnalysis = Field(default_factory=RecipeCostAnalysis)
+    business_benefits: list[str] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
 
 
 class AgentActivityEvent(BaseModel):
@@ -88,5 +149,7 @@ class AgentResponse(BaseModel):
     activity_events: list[AgentActivityEvent] = Field(default_factory=list)
     menu_draft: Optional[StructuredMenuDraft] = None
     menu_design: Optional[GeneratedMenuDesign] = None
+    recipe_data: Optional[OptimizedRecipe] = None
+    entities: dict[str, Any] = Field(default_factory=dict)
     suggested_followups: list[str] = Field(default_factory=list)
     attachments: list[dict] = Field(default_factory=list)
