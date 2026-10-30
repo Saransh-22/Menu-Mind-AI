@@ -370,3 +370,97 @@ def analyze_menu(menu_df: pd.DataFrame) -> dict:
         result["categories"] = cat_counts.to_dict()
 
     return result
+
+
+def impute_revenue(sales_df: pd.DataFrame, menu_df: pd.DataFrame | None) -> pd.DataFrame:
+    """
+    If sales_df has no revenue column but has quantity_sold, compute revenue
+    by joining against menu prices via item_name or item_id.
+    Returns a copy of sales_df with a populated 'revenue' column.
+    """
+    df = sales_df.copy()
+    if "revenue" in df.columns:
+        df["revenue"] = pd.to_numeric(df["revenue"], errors="coerce")
+        if df["revenue"].notna().any():
+            return df
+
+    if menu_df is None or "price" not in menu_df.columns:
+        return df
+
+    menu = menu_df.copy()
+    menu["price"] = pd.to_numeric(menu["price"], errors="coerce")
+
+    price_by_name: dict[str, float] = {}
+    price_by_id: dict[str, float] = {}
+    if "item_name" in menu.columns:
+        price_by_name = {
+            str(n).strip().lower(): p
+            for n, p in zip(menu["item_name"], menu["price"])
+            if pd.notna(p)
+        }
+    if "item_id" in menu.columns:
+        price_by_id = {
+            str(i).strip(): p
+            for i, p in zip(menu["item_id"], menu["price"])
+            if pd.notna(p)
+        }
+
+    def _get_price(row) -> float:
+        name_col = "_matched_menu_name" if "_matched_menu_name" in row.index else (
+            "item_name" if "item_name" in row.index else None
+        )
+        if name_col:
+            key = str(row.get(name_col, "")).strip().lower()
+            if key in price_by_name:
+                return price_by_name[key]
+        if "item_id" in row.index:
+            key = str(row.get("item_id", "")).strip()
+            if key in price_by_id:
+                return price_by_id[key]
+        return float("nan")
+
+    qty = pd.to_numeric(df.get("quantity_sold", pd.Series(dtype=float)), errors="coerce")
+    prices = df.apply(_get_price, axis=1)
+    df["revenue"] = qty * prices
+    return df
+
+
+def impute_category(sales_df: pd.DataFrame, menu_df: pd.DataFrame | None) -> pd.DataFrame:
+    """Attach category to sales rows if missing, so charts don't show all-Uncategorised."""
+    df = sales_df.copy()
+    if menu_df is None or "category" not in menu_df.columns:
+        return df
+
+    cat_by_name: dict[str, str] = {}
+    cat_by_id: dict[str, str] = {}
+    if "item_name" in menu_df.columns:
+        cat_by_name = {
+            str(n).strip().lower(): str(c)
+            for n, c in zip(menu_df["item_name"], menu_df["category"])
+            if pd.notna(c)
+        }
+    if "item_id" in menu_df.columns:
+        cat_by_id = {
+            str(i).strip(): str(c)
+            for i, c in zip(menu_df["item_id"], menu_df["category"])
+            if pd.notna(c)
+        }
+
+    def _get_cat(row) -> str:
+        name_col = "_matched_menu_name" if "_matched_menu_name" in row.index else (
+            "item_name" if "item_name" in row.index else None
+        )
+        if name_col:
+            key = str(row.get(name_col, "")).strip().lower()
+            if key in cat_by_name:
+                return cat_by_name[key]
+        if "item_id" in row.index:
+            key = str(row.get("item_id", "")).strip()
+            if key in cat_by_id:
+                return cat_by_id[key]
+        return "Other"
+
+    if "category" not in df.columns or df["category"].isna().all():
+        df["category"] = df.apply(_get_cat, axis=1)
+
+    return df

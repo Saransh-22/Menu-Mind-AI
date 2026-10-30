@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-forest: #183B32;
+  --secondary-forest: #24483E;
+  --bg-cream: #F7F5EF;
+  --card-bg: #FFFFFF;
+  --terracotta: #D97757;
+  --amber: #D6A64F;
+  --text-primary: #303A35;
+  --text-secondary: #7A817B;
+  --border-subtle: #E8E5DD;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-cream);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Manrope', 'Inter', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D5D1C7;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B8B3A8;
+}
+
+/* Numeric tabular formatting */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
