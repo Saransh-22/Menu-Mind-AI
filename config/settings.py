@@ -48,3 +48,14 @@ SERPAPI_BASE_URL = "https://serpapi.com/search.json"  # SerpApi Google Search en
 CONFIDENCE_HIGH = 0.75
 CONFIDENCE_MEDIUM = 0.50
 CONFIDENCE_LOW = 0.25
+
+# ─── Multi-Agent & Chat Settings ──────────────────────────────────────────────
+GEMINI_CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", GEMINI_MODEL)
+GEMINI_VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-2.5-flash")
+IMAGE_GENERATION_PROVIDER = os.getenv("IMAGE_GENERATION_PROVIDER", "auto").lower()
+IMAGE_GENERATION_API_KEY = os.getenv("IMAGE_GENERATION_API_KEY", "")
+IMAGE_GENERATION_MODEL = os.getenv("IMAGE_GENERATION_MODEL", "imagen-3.0-generate-002")
+
+ASSETS_DIR = BASE_DIR / "data" / "assets"
+ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+

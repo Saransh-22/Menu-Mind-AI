@@ -93,6 +93,7 @@ def download_html_report(run_id: int, run: dict = Depends(get_verified_run)):
     clean_filename = re.sub(r"[^\w\-]", "_", rest_name).strip("_")
     return HTMLResponse(
         content=html_content,
+        media_type="text/html; charset=utf-8",
         headers={
             "Content-Disposition": f'attachment; filename="menumind_{clean_filename}_report.html"'
         },

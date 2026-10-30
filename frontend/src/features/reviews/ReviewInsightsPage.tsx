@@ -13,6 +13,8 @@ import {
   ExternalLink,
   ChevronRight,
   TrendingUp,
+  Bot,
+  Filter,
 } from 'lucide-react';
 import { useAppStore } from '../../store';
 import {
@@ -37,9 +39,10 @@ import {
 } from 'recharts';
 
 export default function ReviewInsightsPage() {
-  const { activeRun } = useAppStore();
+  const { activeRun, openAssistantWithContext } = useAppStore();
   const queryClient = useQueryClient();
   const [itemSearch, setItemSearch] = useState('');
+  const [selectedStarFilter, setSelectedStarFilter] = useState<number | null>(null);
   const [retrievalStatus, setRetrievalStatus] = useState<string | null>(null);
 
   const runId = activeRun?.id;
@@ -132,10 +135,18 @@ export default function ReviewInsightsPage() {
     );
   }
 
-  // Filter items by search
-  const filteredItems = (itemInsights || []).filter((item) =>
-    item.item_name.toLowerCase().includes(itemSearch.toLowerCase())
-  );
+  // Filter items by search and star rating
+  const filteredItems = (itemInsights || []).filter((item) => {
+    if (itemSearch && !item.item_name.toLowerCase().includes(itemSearch.toLowerCase())) {
+      return false;
+    }
+    if (selectedStarFilter !== null) {
+      if (!item.avg_rating) return false;
+      const rounded = Math.round(item.avg_rating);
+      if (rounded !== selectedStarFilter) return false;
+    }
+    return true;
+  });
 
   // Rating distribution data formatting
   const ratingData = [5, 4, 3, 2, 1].map((stars) => ({
@@ -154,6 +165,17 @@ export default function ReviewInsightsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() =>
+              openAssistantWithContext(
+                `Act as the Customer Voice specialist. Synthesize the ${sentiment.review_count} customer reviews for our restaurant. What are the recurring compliments, complaints, and dish sentiment issues?`
+              )
+            }
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 shadow-2xs transition"
+          >
+            <Bot className="h-4 w-4" />
+            Summarize Customer Voice
+          </button>
           <button
             onClick={() => webReviewsMutation.mutate()}
             disabled={webReviewsMutation.isPending}
@@ -362,20 +384,49 @@ export default function ReviewInsightsPage() {
 
       {/* Item-Level Review Feedback Table */}
       <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
           <div>
             <h2 className="text-base font-semibold text-stone-900 font-serif">Item-Level Feedback Matrix</h2>
             <p className="text-xs text-stone-500">Individual dish mentions, ratings, and customer impressions</p>
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-stone-400" />
-            <input
-              type="text"
-              placeholder="Filter menu items..."
-              value={itemSearch}
-              onChange={(e) => setItemSearch(e.target.value)}
-              className="rounded-lg border border-stone-200 pl-9 pr-4 py-1.5 text-xs focus:border-forest focus:outline-none"
-            />
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Star Rating Pills */}
+            <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-lg text-xs">
+              <button
+                onClick={() => setSelectedStarFilter(null)}
+                className={`px-2 py-0.5 rounded font-medium transition ${
+                  selectedStarFilter === null ? 'bg-forest text-cream font-bold' : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                All Stars
+              </button>
+              {[5, 4, 3, 2, 1].map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setSelectedStarFilter(selectedStarFilter === st ? null : st)}
+                  className={`flex items-center gap-0.5 px-2 py-0.5 rounded font-medium transition ${
+                    selectedStarFilter === st
+                      ? 'bg-amber text-stone-900 font-bold'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <span>{st}</span>
+                  <Star className="h-3 w-3 fill-amber text-amber" />
+                </button>
+              ))}
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-stone-400" />
+              <input
+                type="text"
+                placeholder="Filter menu items..."
+                value={itemSearch}
+                onChange={(e) => setItemSearch(e.target.value)}
+                className="rounded-lg border border-stone-200 pl-9 pr-4 py-1.5 text-xs focus:border-forest focus:outline-none"
+              />
+            </div>
           </div>
         </div>
 

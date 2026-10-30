@@ -160,4 +160,54 @@ CREATE_TABLES_SQL = [
         limitations     TEXT
     )
     """,
+
+    # ── AI Conversations & Messages (Additive) ───────────────────────────────
+    """
+    CREATE TABLE IF NOT EXISTS ai_conversations (
+        id              TEXT PRIMARY KEY,
+        restaurant_id   INTEGER NOT NULL REFERENCES restaurants(id),
+        run_id          INTEGER REFERENCES analysis_runs(id),
+        title           TEXT NOT NULL,
+        created_at      TEXT DEFAULT (datetime('now')),
+        updated_at      TEXT DEFAULT (datetime('now'))
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS ai_messages (
+        id              TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL REFERENCES ai_conversations(id) ON DELETE CASCADE,
+        role            TEXT NOT NULL,
+        content         TEXT NOT NULL,
+        attachments     TEXT,
+        agent_metadata  TEXT,
+        created_at      TEXT DEFAULT (datetime('now'))
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS ai_generated_assets (
+        id              TEXT PRIMARY KEY,
+        conversation_id TEXT REFERENCES ai_conversations(id),
+        restaurant_id   INTEGER NOT NULL REFERENCES restaurants(id),
+        asset_type      TEXT NOT NULL,
+        title           TEXT NOT NULL,
+        content         TEXT,
+        image_url       TEXT,
+        status          TEXT DEFAULT 'draft',
+        created_at      TEXT DEFAULT (datetime('now')),
+        updated_at      TEXT DEFAULT (datetime('now'))
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS ai_agent_runs (
+        id              TEXT PRIMARY KEY,
+        conversation_id TEXT REFERENCES ai_conversations(id),
+        restaurant_id   INTEGER NOT NULL REFERENCES restaurants(id),
+        agent_name      TEXT NOT NULL,
+        intent          TEXT,
+        tools_invoked   TEXT,
+        status          TEXT DEFAULT 'completed',
+        execution_time_ms INTEGER,
+        created_at      TEXT DEFAULT (datetime('now'))
+    )
+    """,
 ]

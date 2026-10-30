@@ -5,9 +5,15 @@ interface AppState {
   activeRestaurant: Restaurant | null;
   activeRun: AnalysisRun | null;
   isSidebarCollapsed: boolean;
+  isAssistantDrawerOpen: boolean;
+  assistantPromptContext: string | null;
   setActiveRestaurant: (restaurant: Restaurant | null) => void;
   setActiveRun: (run: AnalysisRun | null) => void;
   toggleSidebar: () => void;
+  toggleAssistantDrawer: () => void;
+  setAssistantDrawerOpen: (open: boolean) => void;
+  openAssistantWithContext: (prompt: string) => void;
+  clearAssistantPromptContext: () => void;
 }
 
 const SAVED_REST_KEY = 'menumind_active_restaurant';
@@ -26,6 +32,8 @@ export const useAppStore = create<AppState>((set) => ({
   activeRestaurant: loadSaved<Restaurant>(SAVED_REST_KEY),
   activeRun: loadSaved<AnalysisRun>(SAVED_RUN_KEY),
   isSidebarCollapsed: false,
+  isAssistantDrawerOpen: false,
+  assistantPromptContext: null,
 
   setActiveRestaurant: (restaurant) => {
     if (restaurant) {
@@ -47,4 +55,16 @@ export const useAppStore = create<AppState>((set) => ({
 
   toggleSidebar: () =>
     set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
+
+  toggleAssistantDrawer: () =>
+    set((state) => ({ isAssistantDrawerOpen: !state.isAssistantDrawerOpen })),
+
+  setAssistantDrawerOpen: (open: boolean) =>
+    set({ isAssistantDrawerOpen: open }),
+
+  openAssistantWithContext: (prompt: string) =>
+    set({ isAssistantDrawerOpen: true, assistantPromptContext: prompt }),
+
+  clearAssistantPromptContext: () =>
+    set({ assistantPromptContext: null }),
 }));

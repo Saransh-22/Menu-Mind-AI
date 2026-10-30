@@ -62,6 +62,33 @@ export const Header: React.FC = () => {
     },
   });
 
+  const handleSelectRestaurant = async (rest: any) => {
+    setActiveRestaurant(rest);
+    setIsRestDropdownOpen(false);
+
+    try {
+      const restRuns = await fetchRestaurantRuns(rest.id);
+      if (restRuns && restRuns.length > 0) {
+        setActiveRun(restRuns[0]);
+      } else {
+        setActiveRun(null);
+      }
+    } catch {
+      setActiveRun(null);
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['runs'] });
+    queryClient.invalidateQueries({ queryKey: ['analyticsSummary'] });
+    queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+    queryClient.invalidateQueries({ queryKey: ['sentimentSummary'] });
+    queryClient.invalidateQueries({ queryKey: ['itemReviewInsights'] });
+    queryClient.invalidateQueries({ queryKey: ['reviewTrends'] });
+    queryClient.invalidateQueries({ queryKey: ['wasteSummary'] });
+    queryClient.invalidateQueries({ queryKey: ['qualityReports'] });
+    queryClient.invalidateQueries({ queryKey: ['validation'] });
+    queryClient.invalidateQueries({ queryKey: ['conversations'] });
+  };
+
   return (
     <header
       className={`fixed top-0 right-0 z-30 h-16 bg-cream-card/90 backdrop-blur-md border-b border-cream-border flex items-center justify-between px-6 transition-all duration-300 ${
@@ -95,10 +122,7 @@ export const Header: React.FC = () => {
                 {restaurants.map((rest) => (
                   <button
                     key={rest.id}
-                    onClick={() => {
-                      setActiveRestaurant(rest);
-                      setIsRestDropdownOpen(false);
-                    }}
+                    onClick={() => handleSelectRestaurant(rest)}
                     className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-cream/60 transition ${
                       activeRestaurant?.id === rest.id ? 'bg-forest-muted text-forest font-bold' : 'text-brandText-primary'
                     }`}

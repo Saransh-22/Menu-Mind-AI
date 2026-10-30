@@ -19,6 +19,8 @@ import {
   FlaskConical,
   HelpCircle,
   SlidersHorizontal,
+  Bot,
+  CheckCheck,
 } from 'lucide-react';
 import { useAppStore } from '../../store';
 import {
@@ -27,14 +29,16 @@ import {
   fetchAnalysisProgress,
   saveRecommendationApproval,
 } from '../../api/recommendations';
+import { createExperiment } from '../../api/experiments';
 import { Recommendation } from '../../types';
 import ActionBadge from '../../components/common/ActionBadge';
 import MetricCard from '../../components/common/MetricCard';
 import EmptyState from '../../components/common/EmptyState';
 import { useNavigate } from 'react-router-dom';
+import { formatCurrency } from '../../utils/currency';
 
 export default function RecommendationsPage() {
-  const { activeRun } = useAppStore();
+  const { activeRun, openAssistantWithContext } = useAppStore();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -44,6 +48,15 @@ export default function RecommendationsPage() {
   const [selectedRec, setSelectedRec] = useState<Recommendation | null>(null);
   const [approvalNotes, setApprovalNotes] = useState('');
   const [isAgentRunning, setIsAgentRunning] = useState(false);
+  const [isExperimentModalOpen, setIsExperimentModalOpen] = useState(false);
+  const [experimentForm, setExperimentForm] = useState({
+    title: '',
+    hypothesis: '',
+    intervention: '',
+    success_criteria: 'Increase dish margin by 10% without volume drop > 5%',
+    guardrail_metrics: 'Customer rating >= 4.0, sales volume >= 80% baseline',
+  });
+  const [isCreatingExperiment, setIsCreatingExperiment] = useState(false);
 
   const runId = activeRun?.id;
 
@@ -134,6 +147,58 @@ export default function RecommendationsPage() {
     approvalMutation.mutate({ recId, decision, notes });
   };
 
+  const handleBulkApproveHighConfidence = async () => {
+    const highConfidencePending = recList.filter(
+      (r) => !r.approval && (r.confidence_score || 0) >= 0.8
+    );
+    if (highConfidencePending.length === 0) {
+      alert('No pending recommendations with confidence >= 80% found.');
+      return;
+    }
+    for (const r of highConfidencePending) {
+      await saveRecommendationApproval(
+        r.id,
+        'approved',
+        'Bulk approved based on high AI confidence score (>=80%).'
+      );
+    }
+    queryClient.invalidateQueries({ queryKey: ['recommendations', runId] });
+  };
+
+  const getActionCount = (action: string) => {
+    if (action === 'ALL') return recList.length;
+    return recList.filter((r) => r.action === action).length;
+  };
+
+  const openExperimentModalForRec = (rec: Recommendation) => {
+    setExperimentForm({
+      title: `${rec.action.toUpperCase()} Test: ${rec.item_name}`,
+      hypothesis: `Applying "${rec.action}" to ${rec.item_name} based on AI recommendation will improve category contribution.`,
+      intervention: rec.reasoning || `Execute ${rec.action} strategy on ${rec.item_name}.`,
+      success_criteria: 'Increase category revenue by >= 8% over 30 days',
+      guardrail_metrics: 'Return customer feedback rating >= 4.0 / 5.0',
+    });
+    setIsExperimentModalOpen(true);
+  };
+
+  const handleSaveExperiment = async () => {
+    if (!runId || !selectedRec) return;
+    setIsCreatingExperiment(true);
+    try {
+      await createExperiment(runId, {
+        ...experimentForm,
+        recommendation_id: selectedRec.id,
+      });
+      setIsExperimentModalOpen(false);
+      alert('Experiment successfully scheduled and linked to this recommendation!');
+    } catch (err) {
+      console.error('Failed to create experiment:', err);
+      alert('Failed to create experiment. Please try again.');
+    } finally {
+      setIsCreatingExperiment(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Banner */}
@@ -218,23 +283,44 @@ export default function RecommendationsPage() {
       <div className="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
         {/* Action Type Tabs */}
         <div className="flex flex-wrap items-center gap-1.5">
-          {['ALL', 'IMPROVE', 'REMOVE', 'PROMOTE', 'REPRICE', 'INSUFFICIENT_EVIDENCE'].map((action) => (
-            <button
-              key={action}
-              onClick={() => setActionFilter(action)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                actionFilter === action
-                  ? 'bg-forest text-cream'
-                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-              }`}
-            >
-              {action.replace('_', ' ')}
-            </button>
-          ))}
+          {['ALL', 'IMPROVE', 'REMOVE', 'PROMOTE', 'REPRICE', 'INSUFFICIENT_EVIDENCE'].map((action) => {
+            const count = getActionCount(action);
+            return (
+              <button
+                key={action}
+                onClick={() => setActionFilter(action)}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  actionFilter === action
+                    ? 'bg-forest text-cream'
+                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                }`}
+              >
+                <span>{action.replace('_', ' ')}</span>
+                <span
+                  className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                    actionFilter === action
+                      ? 'bg-cream/20 text-cream'
+                      : 'bg-stone-200 text-stone-700'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Status Filter & Search */}
-        <div className="flex items-center gap-2">
+        {/* Status Filter & Search & Bulk Approve */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleBulkApproveHighConfidence}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-forest/30 bg-forest/5 hover:bg-forest/10 px-3 py-1.5 text-xs font-semibold text-forest transition"
+            title="Automatically approve all pending actions with >= 80% AI confidence"
+          >
+            <CheckCheck className="h-3.5 w-3.5" />
+            Bulk Approve High Confidence (&ge;80%)
+          </button>
+
           <select
             value={approvalFilter}
             onChange={(e) => setApprovalFilter(e.target.value)}
@@ -326,8 +412,8 @@ export default function RecommendationsPage() {
                     <div>
                       <span className="text-stone-400 block text-[10px]">Revenue</span>
                       <span className="font-semibold text-stone-800">
-                        {rec.sales_metrics?.total_revenue
-                          ? `$${rec.sales_metrics.total_revenue.toLocaleString()}`
+                        {rec.sales_metrics?.total_revenue !== undefined
+                          ? formatCurrency(rec.sales_metrics.total_revenue)
                           : 'No data'}
                       </span>
                     </div>
@@ -344,13 +430,27 @@ export default function RecommendationsPage() {
 
                 {/* Card Footer: Approval Buttons & Evidence Trigger */}
                 <div className="mt-5 flex items-center justify-between border-t border-stone-100 pt-3">
-                  <button
-                    onClick={() => setSelectedRec(rec)}
-                    className="flex items-center gap-1 text-xs font-semibold text-forest hover:underline"
-                  >
-                    View Full Evidence & Steps
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setSelectedRec(rec)}
+                      className="flex items-center gap-1 text-xs font-semibold text-forest hover:underline"
+                    >
+                      View Full Evidence & Steps
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() =>
+                        openAssistantWithContext(
+                          `Explain the recommendation for "${rec.item_name}" (${rec.action}). What are the key sales figures, margin calculations, and risks?`
+                        )
+                      }
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded transition"
+                      title="Ask AI Assistant"
+                    >
+                      <Bot className="w-3 h-3" />
+                      Ask AI
+                    </button>
+                  </div>
 
                   {/* Human-in-the-loop decisions */}
                   <div className="flex items-center gap-1.5">
@@ -530,18 +630,123 @@ export default function RecommendationsPage() {
                     </button>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      setSelectedRec(null);
-                      navigate('/experiments');
-                    }}
-                    className="flex items-center gap-1 text-xs font-semibold text-forest hover:underline"
-                  >
-                    <FlaskConical className="h-3.5 w-3.5" />
-                    Launch Experiment
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() =>
+                        openAssistantWithContext(
+                          `Explain the recommendation for "${selectedRec.item_name}" (${selectedRec.action}). What are the key sales figures, margin calculations, and risks?`
+                        )
+                      }
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg border border-emerald-200 transition"
+                    >
+                      <Bot className="h-3.5 w-3.5" />
+                      Ask Assistant
+                    </button>
+                    <button
+                      onClick={() => openExperimentModalForRec(selectedRec)}
+                      className="flex items-center gap-1 text-xs font-semibold text-forest hover:underline"
+                    >
+                      <FlaskConical className="h-3.5 w-3.5" />
+                      Launch Experiment
+                    </button>
+                  </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* In-Context A/B Experiment Creation Modal */}
+      {isExperimentModalOpen && selectedRec && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-gray-200">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <FlaskConical className="h-5 w-5 text-forest" />
+                <h3 className="text-base font-bold text-gray-900">
+                  Launch In-Context Experiment
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsExperimentModalOpen(false)}
+                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-4">
+              Schedule a structured A/B field test linked directly to this recommendation.
+            </p>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-semibold text-gray-700 block mb-1">Experiment Title</label>
+                <input
+                  type="text"
+                  value={experimentForm.title}
+                  onChange={(e) => setExperimentForm({ ...experimentForm, title: e.target.value })}
+                  className="w-full rounded-lg border border-gray-300 p-2 focus:border-forest focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-gray-700 block mb-1">Core Hypothesis</label>
+                <textarea
+                  value={experimentForm.hypothesis}
+                  onChange={(e) => setExperimentForm({ ...experimentForm, hypothesis: e.target.value })}
+                  className="w-full rounded-lg border border-gray-300 p-2 focus:border-forest focus:outline-none"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-gray-700 block mb-1">Operational Intervention</label>
+                <textarea
+                  value={experimentForm.intervention}
+                  onChange={(e) => setExperimentForm({ ...experimentForm, intervention: e.target.value })}
+                  className="w-full rounded-lg border border-gray-300 p-2 focus:border-forest focus:outline-none"
+                  rows={2}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-gray-700 block mb-1">Success Criteria</label>
+                  <input
+                    type="text"
+                    value={experimentForm.success_criteria}
+                    onChange={(e) => setExperimentForm({ ...experimentForm, success_criteria: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 p-2 focus:border-forest focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-gray-700 block mb-1">Guardrail Metrics</label>
+                  <input
+                    type="text"
+                    value={experimentForm.guardrail_metrics}
+                    onChange={(e) => setExperimentForm({ ...experimentForm, guardrail_metrics: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 p-2 focus:border-forest focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+              <button
+                onClick={() => setIsExperimentModalOpen(false)}
+                className="px-4 py-2 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveExperiment}
+                disabled={isCreatingExperiment || !experimentForm.title}
+                className="px-4 py-2 rounded-lg bg-forest hover:bg-forest-secondary text-cream text-xs font-semibold shadow-xs transition disabled:opacity-50"
+              >
+                {isCreatingExperiment ? 'Scheduling...' : 'Save & Launch Experiment'}
+              </button>
             </div>
           </div>
         </div>

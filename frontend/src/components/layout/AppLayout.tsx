@@ -3,6 +3,8 @@ import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { useAppStore } from '../../store';
+import { FloatingAssistant } from '../assistant/FloatingAssistant';
+import { AssistantDrawer } from '../assistant/AssistantDrawer';
 
 export const AppLayout: React.FC = () => {
   const { isSidebarCollapsed, activeRestaurant } = useAppStore();
@@ -24,6 +26,8 @@ export const AppLayout: React.FC = () => {
       >
         <Outlet />
       </main>
+      <FloatingAssistant />
+      <AssistantDrawer />
     </div>
   );
 };

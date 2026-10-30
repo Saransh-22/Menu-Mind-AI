@@ -385,3 +385,220 @@ def save_waste_image(run_id: int, original_name: str, mime_type: str,
              json.dumps(limitations)),
         )
         return cur.lastrowid
+
+
+# ──────────────────────────── AI Conversations & Chat ─────────────────────────
+
+def create_conversation(conv_id: str, restaurant_id: int, run_id: Optional[int] = None,
+                        title: str = "New Conversation", db_path: Optional[str] = None) -> str:
+    with db_session(_db(db_path)) as conn:
+        conn.execute(
+            """INSERT INTO ai_conversations (id, restaurant_id, run_id, title)
+               VALUES (?, ?, ?, ?)""",
+            (conv_id, restaurant_id, run_id, title),
+        )
+        return conv_id
+
+
+def list_conversations(restaurant_id: int, db_path: Optional[str] = None) -> list[dict]:
+    with db_session(_db(db_path)) as conn:
+        rows = conn.execute(
+            """SELECT * FROM ai_conversations
+               WHERE restaurant_id = ?
+               ORDER BY updated_at DESC, created_at DESC""",
+            (restaurant_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_conversation(conv_id: str, db_path: Optional[str] = None) -> Optional[dict]:
+    with db_session(_db(db_path)) as conn:
+        row = conn.execute(
+            "SELECT * FROM ai_conversations WHERE id = ?", (conv_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def update_conversation_title(conv_id: str, title: str, db_path: Optional[str] = None) -> None:
+    with db_session(_db(db_path)) as conn:
+        conn.execute(
+            """UPDATE ai_conversations
+               SET title = ?, updated_at = datetime('now')
+               WHERE id = ?""",
+            (title, conv_id),
+        )
+
+
+def touch_conversation(conv_id: str, db_path: Optional[str] = None) -> None:
+    with db_session(_db(db_path)) as conn:
+        conn.execute(
+            "UPDATE ai_conversations SET updated_at = datetime('now') WHERE id = ?",
+            (conv_id,),
+        )
+
+
+def delete_conversation(conv_id: str, db_path: Optional[str] = None) -> None:
+    with db_session(_db(db_path)) as conn:
+        conn.execute("DELETE FROM ai_messages WHERE conversation_id = ?", (conv_id,))
+        conn.execute("DELETE FROM ai_generated_assets WHERE conversation_id = ?", (conv_id,))
+        conn.execute("UPDATE ai_agent_runs SET conversation_id = NULL WHERE conversation_id = ?", (conv_id,))
+        conn.execute("DELETE FROM ai_conversations WHERE id = ?", (conv_id,))
+
+
+def save_message(msg_id: str, conversation_id: str, role: str, content: str,
+                 attachments: Optional[list] = None, agent_metadata: Optional[dict] = None,
+                 db_path: Optional[str] = None) -> str:
+    with db_session(_db(db_path)) as conn:
+        conn.execute(
+            """INSERT INTO ai_messages
+               (id, conversation_id, role, content, attachments, agent_metadata)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (
+                msg_id,
+                conversation_id,
+                role,
+                content,
+                json.dumps(attachments or []),
+                json.dumps(agent_metadata or {}),
+            ),
+        )
+        conn.execute(
+            "UPDATE ai_conversations SET updated_at = datetime('now') WHERE id = ?",
+            (conversation_id,),
+        )
+        return msg_id
+
+
+def list_messages(conversation_id: str, limit: int = 100, offset: int = 0,
+                  db_path: Optional[str] = None) -> list[dict]:
+    with db_session(_db(db_path)) as conn:
+        rows = conn.execute(
+            """SELECT * FROM ai_messages
+               WHERE conversation_id = ?
+               ORDER BY created_at ASC, rowid ASC
+               LIMIT ? OFFSET ?""",
+            (conversation_id, limit, offset),
+        ).fetchall()
+        results = []
+        for r in rows:
+            d = dict(r)
+            if d.get("attachments"):
+                try:
+                    d["attachments"] = json.loads(d["attachments"])
+                except Exception:
+                    d["attachments"] = []
+            else:
+                d["attachments"] = []
+            if d.get("agent_metadata"):
+                try:
+                    d["agent_metadata"] = json.loads(d["agent_metadata"])
+                except Exception:
+                    d["agent_metadata"] = {}
+            else:
+                d["agent_metadata"] = {}
+            results.append(d)
+        return results
+
+
+# ──────────────────────────── AI Generated Assets ───────────────────────────
+
+def save_generated_asset(asset_id: str, conversation_id: Optional[str],
+                         restaurant_id: int, asset_type: str, title: str,
+                         content: Optional[dict | list | str] = None,
+                         image_url: Optional[str] = None,
+                         status: str = "draft", db_path: Optional[str] = None) -> str:
+    content_str = json.dumps(content) if isinstance(content, (dict, list)) else content
+    with db_session(_db(db_path)) as conn:
+        conn.execute(
+            """INSERT INTO ai_generated_assets
+               (id, conversation_id, restaurant_id, asset_type, title, content, image_url, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (asset_id, conversation_id, restaurant_id, asset_type, title, content_str, image_url, status),
+        )
+        return asset_id
+
+
+def get_generated_asset(asset_id: str, db_path: Optional[str] = None) -> Optional[dict]:
+    with db_session(_db(db_path)) as conn:
+        row = conn.execute(
+            "SELECT * FROM ai_generated_assets WHERE id = ?", (asset_id,)
+        ).fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        if d.get("content"):
+            try:
+                d["content"] = json.loads(d["content"])
+            except Exception:
+                pass
+        return d
+
+
+def list_generated_assets(restaurant_id: int, asset_type: Optional[str] = None,
+                          db_path: Optional[str] = None) -> list[dict]:
+    with db_session(_db(db_path)) as conn:
+        if asset_type:
+            rows = conn.execute(
+                """SELECT * FROM ai_generated_assets
+                   WHERE restaurant_id = ? AND asset_type = ?
+                   ORDER BY created_at DESC""",
+                (restaurant_id, asset_type),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT * FROM ai_generated_assets
+                   WHERE restaurant_id = ?
+                   ORDER BY created_at DESC""",
+                (restaurant_id,),
+            ).fetchall()
+        results = []
+        for r in rows:
+            d = dict(r)
+            if d.get("content"):
+                try:
+                    d["content"] = json.loads(d["content"])
+                except Exception:
+                    pass
+            results.append(d)
+        return results
+
+
+def update_asset_status(asset_id: str, status: str, content: Optional[dict | list | str] = None,
+                        image_url: Optional[str] = None, db_path: Optional[str] = None) -> None:
+    with db_session(_db(db_path)) as conn:
+        updates = ["status = ?", "updated_at = datetime('now')"]
+        params = [status]
+        if content is not None:
+            updates.append("content = ?")
+            params.append(json.dumps(content) if isinstance(content, (dict, list)) else content)
+        if image_url is not None:
+            updates.append("image_url = ?")
+            params.append(image_url)
+        params.append(asset_id)
+        conn.execute(
+            f"UPDATE ai_generated_assets SET {', '.join(updates)} WHERE id = ?",
+            tuple(params),
+        )
+
+
+def log_agent_run(run_id: str, conversation_id: Optional[str], restaurant_id: int,
+                  agent_name: str, intent: Optional[str], tools_invoked: list[str],
+                  status: str = "completed", execution_time_ms: int = 0,
+                  db_path: Optional[str] = None) -> str:
+    with db_session(_db(db_path)) as conn:
+        conn.execute(
+            """INSERT INTO ai_agent_runs
+               (id, conversation_id, restaurant_id, agent_name, intent, tools_invoked, status, execution_time_ms)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                run_id,
+                conversation_id,
+                restaurant_id,
+                agent_name,
+                intent,
+                json.dumps(tools_invoked),
+                status,
+                execution_time_ms,
+            ),
+        )
+        return run_id

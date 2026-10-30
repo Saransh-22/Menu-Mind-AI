@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Store,
+  Bot,
 } from 'lucide-react';
 import { useAppStore } from '../../store';
 
@@ -24,8 +25,8 @@ export const Sidebar: React.FC = () => {
     { label: 'Data Upload', path: '/upload', icon: UploadCloud },
     { label: 'Sales Analytics', path: '/analytics', icon: TrendingUp },
     { label: 'Review Insights', path: '/reviews', icon: MessageSquareQuote },
-    { label: 'AI Recommendations', path: '/recommendations', icon: Sparkles, highlight: true },
-    { label: 'Experiments', path: '/experiments', icon: FlaskConical },
+    { label: 'AI Recommendations', path: '/recommendations', icon: Sparkles },
+    { label: 'AI Assistant', path: '/assistant', icon: Bot, highlight: true },
     { label: 'Food Waste', path: '/waste', icon: Recycle },
     { label: 'Reports', path: '/reports', icon: FileSpreadsheet },
   ];

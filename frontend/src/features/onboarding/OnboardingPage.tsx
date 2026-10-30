@@ -16,6 +16,7 @@ import {
   createRestaurant,
   fetchAutocomplete,
   createAnalysisRun,
+  fetchRestaurantRuns,
 } from '../../api/restaurants';
 
 export const OnboardingPage: React.FC = () => {
@@ -73,11 +74,17 @@ export const OnboardingPage: React.FC = () => {
     mutationFn: async (restaurantId: number) => {
       const rest = existingRestaurants.find((r) => r.id === restaurantId);
       if (!rest) throw new Error('Restaurant not found');
-      const run = await createAnalysisRun(restaurantId, {
-        period_start: new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0],
-        period_end: new Date().toISOString().split('T')[0],
-        notes: 'Session Run',
-      });
+      
+      const existingRuns = await fetchRestaurantRuns(restaurantId);
+      let run = existingRuns && existingRuns.length > 0 ? existingRuns[0] : null;
+
+      if (!run) {
+        run = await createAnalysisRun(restaurantId, {
+          period_start: new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0],
+          period_end: new Date().toISOString().split('T')[0],
+          notes: 'Session Run',
+        });
+      }
       return { rest, run };
     },
     onSuccess: ({ rest, run }) => {

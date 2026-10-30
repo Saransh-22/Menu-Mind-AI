@@ -268,3 +268,141 @@ export interface WasteIntelligenceSummary {
   };
   records: WasteRecord[];
 }
+
+// ─── AI Assistant & Multi-Agent Types ─────────────────────────────────────────
+
+export interface Conversation {
+  id: string;
+  restaurant_id: number;
+  run_id?: number;
+  title: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface MessageAttachment {
+  id: string;
+  name: string;
+  mime_type: string;
+  url: string;
+  size_bytes: number;
+}
+
+export interface StructuredMenuItem {
+  name: string;
+  category: string;
+  price: number;
+  cost?: number;
+  margin_pct?: number;
+  description?: string;
+  allergens?: string[];
+  dietary_tags?: string[];
+  confidence?: number;
+}
+
+export interface StructuredMenuCategory {
+  category: string;
+  description?: string;
+  items: StructuredMenuItem[];
+}
+
+export interface StructuredMenuDraft {
+  title: string;
+  concept: string;
+  currency: string;
+  categories: StructuredMenuCategory[];
+  total_items: number;
+  indicative_avg_bill?: number;
+  notes?: string;
+}
+
+export interface DesignSpecification {
+  style?: string;
+  style_preset?: string;
+  primary_color?: string;
+  secondary_color?: string;
+  palette?: string[];
+  font_family?: string;
+  layout?: string;
+  layout_format?: string;
+  page_size?: string;
+  orientation?: string;
+  page_count?: number;
+  background_theme?: string;
+  include_descriptions?: boolean;
+  include_prices?: boolean;
+  include_qr_placeholder?: boolean;
+}
+
+export interface GeneratedMenuDesign {
+  id?: string;
+  design_id?: string;
+  restaurant_id?: number;
+  conversation_id?: string;
+  title?: string;
+  draft_title?: string;
+  style?: string;
+  style_preset?: string;
+  palette?: string[];
+  font_family?: string;
+  layout?: string;
+  layout_format?: string;
+  total_items?: number;
+  preview_url?: string;
+  html_preview?: string;
+  html_source?: string;
+  artwork_url?: string;
+  svg_artwork_url?: string;
+  status?: string;
+  spec?: DesignSpecification;
+  menu_draft?: StructuredMenuDraft;
+  export_formats?: string[];
+  created_at?: string;
+}
+
+export interface AgentActivityEvent {
+  id?: string;
+  step?: string;
+  agent_name: string;
+  activity_type?: string;
+  message: string;
+  status?: string;
+  timestamp?: string;
+}
+
+export interface AgentResponse {
+  content: string;
+  specialist_agent: string;
+  intent: string;
+  tools_called: string[];
+  activity_events: AgentActivityEvent[];
+  suggested_followups: string[];
+  menu_draft?: StructuredMenuDraft;
+  menu_design?: GeneratedMenuDesign;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversation_id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  attachments?: MessageAttachment[];
+  agent_metadata?: {
+    specialist_agent?: string;
+    intent?: string;
+    tools_called?: string[];
+    activity_events?: AgentActivityEvent[];
+    suggested_followups?: string[];
+    menu_draft?: StructuredMenuDraft;
+    menu_design?: GeneratedMenuDesign;
+    [key: string]: any;
+  };
+  created_at?: string;
+}
+
+export interface ChatTurnResponse {
+  user_message: ChatMessage;
+  assistant_message: ChatMessage;
+  agent_response: AgentResponse;
+}
+

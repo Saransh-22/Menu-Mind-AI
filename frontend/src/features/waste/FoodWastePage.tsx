@@ -13,6 +13,7 @@ import {
   Info,
   ShieldCheck,
   Eye,
+  Bot,
 } from 'lucide-react';
 import { useAppStore } from '../../store';
 import {
@@ -22,10 +23,11 @@ import {
 } from '../../api/waste';
 import MetricCard from '../../components/common/MetricCard';
 import EmptyState from '../../components/common/EmptyState';
+import { formatCurrency } from '../../utils/currency';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 export default function FoodWastePage() {
-  const { activeRun } = useAppStore();
+  const { activeRun, openAssistantWithContext } = useAppStore();
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<'measured' | 'spoilage'>('measured');
@@ -134,28 +136,42 @@ export default function FoodWastePage() {
           </p>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex rounded-lg border border-stone-200 bg-white p-1">
+        <div className="flex flex-wrap items-center gap-3">
           <button
-            onClick={() => setActiveTab('measured')}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-              activeTab === 'measured'
-                ? 'bg-forest text-cream'
-                : 'text-stone-600 hover:text-stone-900'
-            }`}
+            onClick={() =>
+              openAssistantWithContext(
+                `Act as the Operations & Waste specialist. Review our kitchen waste records and slow-moving items at high risk of spoilage. What operational adjustments and specials can reduce waste?`
+              )
+            }
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700 shadow-2xs transition"
           >
-            Measured Waste & Vision
+            <Bot className="h-4 w-4" />
+            Ask AI About Waste Reduction
           </button>
-          <button
-            onClick={() => setActiveTab('spoilage')}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-              activeTab === 'spoilage'
-                ? 'bg-forest text-cream'
-                : 'text-stone-600 hover:text-stone-900'
-            }`}
-          >
-            Predictive Spoilage Risk
-          </button>
+
+          {/* Tab Switcher */}
+          <div className="flex rounded-lg border border-stone-200 bg-white p-1">
+            <button
+              onClick={() => setActiveTab('measured')}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                activeTab === 'measured'
+                  ? 'bg-forest text-cream'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              Measured Waste & Vision
+            </button>
+            <button
+              onClick={() => setActiveTab('spoilage')}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                activeTab === 'spoilage'
+                  ? 'bg-forest text-cream'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              Predictive Spoilage Risk
+            </button>
+          </div>
         </div>
       </div>
 
@@ -165,10 +181,7 @@ export default function FoodWastePage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard
               title="Measured Waste Cost"
-              value={`$${(measured?.total_waste_cost || 0).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}`}
+              value={formatCurrency(measured?.total_waste_cost || 0)}
               icon={<DollarSign className="h-5 w-5 text-terracotta" />}
               status="negative"
               subtext={`${measured?.calculable_records || 0} items with costed units`}
@@ -181,10 +194,7 @@ export default function FoodWastePage() {
             />
             <MetricCard
               title="Weekly Spoilage Exposure"
-              value={`$${(spoilage?.total_weekly_exposure || 0).toLocaleString(undefined, {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0,
-              })}`}
+              value={formatCurrency(spoilage?.total_weekly_exposure || 0)}
               icon={<TrendingDown className="h-5 w-5 text-amber" />}
               status="warning"
               subtext="At-risk slow-moving inventory"
@@ -194,7 +204,7 @@ export default function FoodWastePage() {
               value={spoilage?.high_risk_count || 0}
               icon={<AlertTriangle className="h-5 w-5 text-terracotta" />}
               status={spoilage?.high_risk_count ? 'negative' : 'positive'}
-              subtext="Low sales velocity velocity"
+              subtext="Low sales velocity"
             />
           </div>
 
@@ -330,7 +340,7 @@ export default function FoodWastePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700">Unit Cost ($)</label>
+                  <label className="block text-xs font-semibold text-stone-700">Unit Cost</label>
                   <input
                     type="number"
                     step="0.01"
@@ -360,7 +370,7 @@ export default function FoodWastePage() {
                 <div className="text-xs text-stone-600">
                   Calculated Cost:{' '}
                   <span className="font-bold text-stone-900">
-                    ${(quantity * unitCost).toFixed(2)}
+                    {formatCurrency(quantity * unitCost)}
                   </span>
                 </div>
                 <button
@@ -414,9 +424,9 @@ export default function FoodWastePage() {
                         <td className="py-3 px-4 text-stone-700">
                           {rec.quantity} {rec.unit}
                         </td>
-                        <td className="py-3 px-4 text-stone-700">${rec.unit_cost.toFixed(2)}</td>
+                        <td className="py-3 px-4 text-stone-700">{formatCurrency(rec.unit_cost)}</td>
                         <td className="py-3 px-4 font-bold text-terracotta">
-                          ${(rec.quantity * rec.unit_cost).toFixed(2)}
+                          {formatCurrency(rec.quantity * rec.unit_cost)}
                         </td>
                         <td className="py-3 px-4 capitalize text-stone-600">
                           {rec.waste_reason?.replace('_', ' ') || 'N/A'}
@@ -475,9 +485,9 @@ export default function FoodWastePage() {
                         <td className="py-3 px-4 font-semibold text-stone-900">{item.item_name}</td>
                         <td className="py-3 px-4 text-stone-700">{item.units_sold}</td>
                         <td className="py-3 px-4 text-stone-700">{item.daily_velocity.toFixed(2)} / day</td>
-                        <td className="py-3 px-4 text-stone-700">${item.unit_cost.toFixed(2)}</td>
+                        <td className="py-3 px-4 text-stone-700">{formatCurrency(item.unit_cost)}</td>
                         <td className="py-3 px-4 font-bold text-terracotta">
-                          ${item.weekly_exposure.toFixed(2)}
+                          {formatCurrency(item.weekly_exposure)}
                         </td>
                         <td className="py-3 px-4">
                           <span

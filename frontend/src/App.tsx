@@ -12,6 +12,7 @@ import RecommendationsPage from './features/recommendations/RecommendationsPage'
 import ExperimentsPage from './features/experiments/ExperimentsPage';
 import FoodWastePage from './features/waste/FoodWastePage';
 import ReportsPage from './features/reports/ReportsPage';
+import { AssistantPage } from './features/assistant/AssistantPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/experiments" element={<ExperimentsPage />} />
             <Route path="/waste" element={<FoodWastePage />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/assistant" element={<AssistantPage />} />
 
             {/* Default root path redirects to overview */}
             <Route path="/" element={<Navigate to="/overview" replace />} />
