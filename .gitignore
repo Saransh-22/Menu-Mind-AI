@@ -1,0 +1,55 @@
+# Environment & Secrets
+.env
+*.env
+!.env.example
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+menumind.db
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+test_output.txt
+.tox/
+.nox/
+
+# Logs & Runtime outputs
+*.log
+reports/*.html
+reports/*.csv
+downloads/
+
+# Data files (keep provided sample datasets, ignore ad-hoc/root/runtime uploads)
+*.csv
+*.xlsx
+*.xls
+!sample_data/*.csv
+!sample_data/*.xlsx
+
+# IDE & Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+

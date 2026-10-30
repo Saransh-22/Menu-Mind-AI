@@ -1,0 +1,13 @@
+restaurant_id,item_id,item_name,category,description,price
+REST001,ITEM001,Margherita Pizza,Pizza,Classic San Marzano tomato base with fresh mozzarella and basil,12.99
+REST001,ITEM002,Pepperoni Pizza,Pizza,Spicy pepperoni slices on tomato sauce with mozzarella,14.99
+REST001,ITEM003,Caesar Salad,Salad,Crisp romaine lettuce with house Caesar dressing and Parmesan croutons,9.99
+REST001,ITEM004,Greek Salad,Salad,Tomatoes cucumber olives feta cheese and oregano dressing,10.99
+REST001,ITEM005,Grilled Salmon,Mains,Atlantic salmon fillet with lemon butter sauce and seasonal vegetables,22.99
+REST001,ITEM006,Chicken Parmesan,Mains,Breaded chicken breast with marinara and melted mozzarella,18.99
+REST001,ITEM007,Spaghetti Carbonara,Pasta,Spaghetti with creamy egg sauce guanciale and Pecorino Romano,16.99
+REST001,ITEM008,Penne Arrabbiata,Pasta,Penne in spicy tomato sauce with garlic and fresh parsley,13.99
+REST001,ITEM009,Tiramisu,Dessert,Classic Italian dessert with mascarpone espresso-soaked ladyfingers,7.50
+REST001,ITEM010,Chocolate Lava Cake,Dessert,Warm chocolate cake with a molten centre served with vanilla ice cream,8.50
+REST001,ITEM011,Garlic Bread,Sides,Toasted sourdough with herb butter and roasted garlic,5.99
+REST001,ITEM012,Bruschetta,Sides,Toasted bread with diced tomatoes fresh basil and balsamic glaze,6.99

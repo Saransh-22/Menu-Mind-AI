@@ -1,0 +1,16 @@
+restaurant_id,review_id,item_name,rating,review_text,review_date,source,source_url
+REST001,REV001,Margherita Pizza,5,"Best margherita I've had in the city. The crust is perfectly crispy and the basil is fresh.",2024-01-10,example_reviews,https://example.com/r/1
+REST001,REV002,Margherita Pizza,4,"Really good pizza but the sauce portion felt a little small today. Still would order again.",2024-01-14,example_reviews,https://example.com/r/2
+REST001,REV003,Margherita Pizza,5,"Absolutely delicious. My go-to every visit.",2024-02-05,example_reviews,https://example.com/r/3
+REST001,REV004,Pepperoni Pizza,3,"Pepperoni pizza was okay but a bit greasy. Nothing special compared to other places.",2024-01-20,example_reviews,https://example.com/r/4
+REST001,REV005,Caesar Salad,4,"Fresh and well-dressed. The croutons were homemade which was a nice touch.",2024-01-25,example_reviews,https://example.com/r/5
+REST001,REV006,Caesar Salad,2,"Caesar salad was soggy and the dressing was too salty. Disappointed.",2024-02-10,example_reviews,https://example.com/r/6
+REST001,REV007,Grilled Salmon,5,"The salmon was cooked perfectly — moist inside and slightly crispy outside. Excellent lemon butter.",2024-01-28,example_reviews,https://example.com/r/7
+REST001,REV008,Grilled Salmon,4,"Loved the salmon. Portion size was generous for the price.",2024-02-18,example_reviews,https://example.com/r/8
+REST001,REV009,Spaghetti Carbonara,5,"Authentic and creamy. Best carbonara outside Italy!",2024-02-01,example_reviews,https://example.com/r/9
+REST001,REV010,Spaghetti Carbonara,4,"Really tasty but the portion could be slightly bigger for $17.",2024-02-20,example_reviews,https://example.com/r/10
+REST001,REV011,Tiramisu,5,"Light airy and perfectly coffee-flavoured. Ordered twice in one dinner!",2024-01-30,example_reviews,https://example.com/r/11
+REST001,REV012,Greek Salad,3,"The Greek salad was average. Feta was not very fresh tasting.",2024-03-02,example_reviews,https://example.com/r/12
+REST001,REV013,,4,"Lovely atmosphere and friendly staff. Food came quickly.",2024-03-05,example_reviews,https://example.com/r/13
+REST001,REV014,Chicken Parmesan,3,"Chicken Parmesan was inconsistent — one side was undercooked. Staff were apologetic though.",2024-03-08,example_reviews,https://example.com/r/14
+REST001,REV015,Garlic Bread,5,"The garlic bread is dangerously addictive. Perfectly crispy with loads of herb butter.",2024-03-10,example_reviews,https://example.com/r/15
